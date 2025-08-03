@@ -1,0 +1,169 @@
+# 知识图谱Schema定义文件
+
+# Schema版本
+version: "1.0.0"
+description: "离线文档知识图谱Schema定义"
+
+# 实体类型定义
+entities:
+  Person:
+    description: "人员实体"
+    properties:
+      name:
+        type: "string"
+        required: true
+        description: "姓名"
+      title:
+        type: "string"
+        required: false
+        description: "职位/头衔"
+      department:
+        type: "string"
+        required: false
+        description: "部门"
+      email:
+        type: "string"
+        required: false
+        description: "邮箱"
+      phone:
+        type: "string"
+        required: false
+        description: "电话"
+        
+  Organization:
+    description: "组织机构实体"
+    properties:
+      name:
+        type: "string"
+        required: true
+        description: "组织名称"
+      type:
+        type: "string"
+        required: false
+        description: "组织类型"
+      address:
+        type: "string"
+        required: false
+        description: "地址"
+      website:
+        type: "string"
+        required: false
+        description: "网站"
+        
+  Project:
+    description: "项目实体"
+    properties:
+      name:
+        type: "string"
+        required: true
+        description: "项目名称"
+      description:
+        type: "string"
+        required: false
+        description: "项目描述"
+      start_date:
+        type: "date"
+        required: false
+        description: "开始日期"
+      end_date:
+        type: "date"
+        required: false
+        description: "结束日期"
+      status:
+        type: "string"
+        required: false
+        description: "项目状态"
+        
+  Document:
+    description: "文档实体"
+    properties:
+      title:
+        type: "string"
+        required: true
+        description: "文档标题"
+      type:
+        type: "string"
+        required: false
+        description: "文档类型"
+      author:
+        type: "string"
+        required: false
+        description: "作者"
+      created_date:
+        type: "date"
+        required: false
+        description: "创建日期"
+      file_path:
+        type: "string"
+        required: false
+        description: "文件路径"
+
+# 关系类型定义
+relations:
+  WORKS_FOR:
+    description: "工作关系"
+    source: "Person"
+    target: "Organization"
+    properties:
+      position:
+        type: "string"
+        required: false
+        description: "职位"
+      start_date:
+        type: "date"
+        required: false
+        description: "入职日期"
+        
+  MANAGES:
+    description: "管理关系"
+    source: "Person"
+    target: "Project"
+    properties:
+      role:
+        type: "string"
+        required: false
+        description: "管理角色"
+        
+  PARTICIPATES_IN:
+    description: "参与关系"
+    source: "Person"
+    target: "Project"
+    properties:
+      role:
+        type: "string"
+        required: false
+        description: "参与角色"
+      contribution:
+        type: "string"
+        required: false
+        description: "贡献描述"
+        
+  BELONGS_TO:
+    description: "归属关系"
+    source: "Project"
+    target: "Organization"
+    properties:
+      department:
+        type: "string"
+        required: false
+        description: "所属部门"
+        
+  AUTHORED_BY:
+    description: "作者关系"
+    source: "Document"
+    target: "Person"
+    properties:
+      role:
+        type: "string"
+        required: false
+        description: "作者角色"
+        
+  RELATES_TO:
+    description: "相关关系"
+    source: "Document"
+    target: "Project"
+    properties:
+      relation_type:
+        type: "string"
+        required: false
+        description: "关系类型"
