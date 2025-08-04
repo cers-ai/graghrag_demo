@@ -74,7 +74,7 @@ const Layout = ({ children }) => {
           fontWeight: 'bold',
           fontSize: collapsed ? '12px' : '14px'
         }}>
-          {collapsed ? 'KG' : '知识图谱'}
+          {collapsed ? 'GR' : 'GraphRAG'}
         </div>
         <Menu
           theme="dark"
@@ -104,7 +104,7 @@ const Layout = ({ children }) => {
             {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           </div>
           <div style={{ flex: 1, fontSize: '18px', fontWeight: 'bold' }}>
-            离线文档知识图谱系统
+            GraphRAG轻量化演示系统
           </div>
         </Header>
         <Content

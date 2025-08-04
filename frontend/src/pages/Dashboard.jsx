@@ -244,7 +244,7 @@ const Dashboard = () => {
       {/* 系统信息 */}
       <Card title="系统信息" size="small">
         <Paragraph>
-          <strong>离线文档知识图谱系统</strong> - 完全本地运行的知识图谱构建和问答系统
+          <strong>GraphRAG轻量化演示系统</strong> - 展示GraphRAG技术的轻量化演示平台
         </Paragraph>
         <Paragraph>
           • 支持Word和Excel文档解析<br/>
