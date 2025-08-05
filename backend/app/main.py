@@ -2,7 +2,6 @@
 FastAPI主应用程序
 """
 
-import asyncio
 import os
 import tempfile
 from datetime import datetime
@@ -11,18 +10,22 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from .services.community_detector import CommunityDetector
+from .services.community_summarizer import CommunitySummarizer
 from .services.document_parser import DocumentParser
 from .services.document_scanner import DocumentScanner
+from .services.graphrag_qa import GraphRAGQA
 from .services.information_extractor import InformationExtractor
 from .services.neo4j_manager import Neo4jManager
 from .services.ollama_client import OllamaClient
 from .services.schema_manager import SchemaManager
 
 # 创建FastAPI应用
-app = FastAPI(title="离线文档知识图谱系统", description="构建完全本地离线运行的知识图谱系统", version="1.0.0")
+app = FastAPI(
+    title="GraphRAG轻量化演示系统", description="展示GraphRAG技术的轻量化演示平台", version="1.0.0"
+)
 
 # 添加CORS中间件
 app.add_middleware(
@@ -40,6 +43,9 @@ schema_manager = None
 ollama_client = None
 information_extractor = None
 neo4j_manager = None
+community_detector = None
+community_summarizer = None
+graphrag_qa = None
 
 
 # 请求/响应模型
@@ -93,9 +99,10 @@ async def startup_event():
     """应用启动时初始化服务"""
     global document_scanner, document_parser, schema_manager
     global ollama_client, information_extractor, neo4j_manager
+    global community_detector, community_summarizer, graphrag_qa
 
     try:
-        # 初始化服务
+        # 初始化基础服务
         document_scanner = DocumentScanner(scan_directories=[])  # 空目录列表，运行时动态指定
         document_parser = DocumentParser()
         schema_manager = SchemaManager("config/schema.yaml")
@@ -103,13 +110,18 @@ async def startup_event():
         information_extractor = InformationExtractor(schema_manager, ollama_client)
         neo4j_manager = Neo4jManager()
 
+        # 初始化GraphRAG服务
+        community_detector = CommunityDetector(neo4j_manager)
+        community_summarizer = CommunitySummarizer(ollama_client, neo4j_manager)
+        graphrag_qa = GraphRAGQA(ollama_client, neo4j_manager)
+
         # 加载Schema
         schema_manager.load_schema()
 
         # 测试Neo4j连接
         neo4j_manager.connect()
 
-        print("✅ 所有服务初始化成功")
+        print("✅ 所有服务初始化成功，包括GraphRAG核心功能")
 
     except Exception as e:
         print(f"❌ 服务初始化失败: {e}")
@@ -471,6 +483,145 @@ async def get_schema():
                     }
                     for name, relation in schema.relations.items()
                 },
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# GraphRAG相关请求模型
+class CommunityDetectionRequest(BaseModel):
+    algorithm: str = "louvain"
+    resolution: float = 1.0
+
+
+class CommunitySummaryRequest(BaseModel):
+    community_id: Optional[int] = None
+    level: str = "detailed"
+
+
+class GraphRAGQARequest(BaseModel):
+    question: str
+    search_strategy: str = "community_first"
+
+
+# GraphRAG API端点
+@app.post("/graphrag/detect_communities")
+async def detect_communities(request: CommunityDetectionRequest):
+    """检测图中的社区结构"""
+    try:
+        if not community_detector:
+            raise HTTPException(status_code=503, detail="社区检测服务未初始化")
+
+        result = community_detector.detect_communities(
+            algorithm=request.algorithm, resolution=request.resolution
+        )
+
+        if result["success"]:
+            return {"success": True, "message": "社区检测完成", "data": result}
+        else:
+            raise HTTPException(status_code=400, detail=result.get("error", "社区检测失败"))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/graphrag/generate_summary")
+async def generate_community_summary(request: CommunitySummaryRequest):
+    """生成社区摘要"""
+    try:
+        if not community_summarizer:
+            raise HTTPException(status_code=503, detail="社区摘要服务未初始化")
+
+        if request.community_id is not None:
+            # 生成单个社区摘要
+            result = community_summarizer.generate_community_summary(
+                community_id=request.community_id, level=request.level
+            )
+        else:
+            # 生成所有社区摘要
+            result = community_summarizer.generate_all_communities_summary(
+                level=request.level
+            )
+
+        if result["success"]:
+            return {"success": True, "message": "社区摘要生成完成", "data": result}
+        else:
+            raise HTTPException(status_code=400, detail=result.get("error", "摘要生成失败"))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/graphrag/qa")
+async def graphrag_question_answer(request: GraphRAGQARequest):
+    """GraphRAG问答"""
+    try:
+        if not graphrag_qa:
+            raise HTTPException(status_code=503, detail="GraphRAG问答服务未初始化")
+
+        result = graphrag_qa.answer_question(
+            question=request.question, search_strategy=request.search_strategy
+        )
+
+        if result["success"]:
+            return {"success": True, "message": "问答完成", "data": result}
+        else:
+            raise HTTPException(status_code=400, detail=result.get("error", "问答失败"))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/graphrag/communities")
+async def get_communities_summary():
+    """获取所有社区摘要信息"""
+    try:
+        if not community_detector:
+            raise HTTPException(status_code=503, detail="社区检测服务未初始化")
+
+        result = community_detector.get_all_communities_summary()
+
+        if result["success"]:
+            return {"success": True, "message": "获取社区信息成功", "data": result["data"]}
+        else:
+            raise HTTPException(status_code=400, detail=result.get("error", "获取社区信息失败"))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/graphrag/community/{community_id}")
+async def get_community_detail(community_id: int):
+    """获取指定社区的详细信息"""
+    try:
+        if not community_detector or not community_summarizer:
+            raise HTTPException(status_code=503, detail="GraphRAG服务未初始化")
+
+        # 获取社区子图
+        subgraph = community_detector.get_community_subgraph(community_id)
+
+        # 获取社区摘要
+        summary = community_summarizer.get_community_summary(community_id)
+
+        return {
+            "success": True,
+            "message": "获取社区详情成功",
+            "data": {
+                "community_id": community_id,
+                "subgraph": subgraph,
+                "summary": summary,
             },
         }
 

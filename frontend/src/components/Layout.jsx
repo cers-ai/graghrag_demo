@@ -10,6 +10,8 @@ import {
   QuestionCircleOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  ClusterOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = AntLayout;
@@ -44,6 +46,16 @@ const Layout = ({ children }) => {
       label: '信息抽取',
     },
     {
+      key: '/community-detection',
+      icon: <ClusterOutlined />,
+      label: '社区检测',
+    },
+    {
+      key: '/community-summary',
+      icon: <FileTextOutlined />,
+      label: '社区摘要',
+    },
+    {
       key: '/graph',
       icon: <ShareAltOutlined />,
       label: '图谱可视化',
@@ -51,7 +63,7 @@ const Layout = ({ children }) => {
     {
       key: '/qa',
       icon: <QuestionCircleOutlined />,
-      label: '问答系统',
+      label: 'GraphRAG问答',
     },
   ];
 
